@@ -55,6 +55,7 @@ clear error when run outside a Git repository.
 | `taskx depends <uuid> add\|remove <uuid>` | Manage dependencies |
 | `taskx actor` | Print the detected actor |
 | `taskx project` | Print the detected project |
+| `taskx skill install codex\|claude\|opencode [--global]` | Install the taskx agent skill |
 | `taskx help agent` | Machine-oriented workflow summary |
 
 Every task command also accepts `--json`.
@@ -159,7 +160,30 @@ uv run pytest
 
 ## Agent integration
 
-A repository using taskx needs only a minimal `AGENTS.md`:
+Install the bundled task-management skill for the coding agent used in the
+current repository:
+
+```bash
+taskx skill install codex
+taskx skill install claude
+taskx skill install opencode
+```
+
+Local installation is the default and writes beneath the Git root to
+`.agents/skills/taskx`, `.claude/skills/taskx`, or
+`.opencode/skills/taskx`, respectively. Add `--global` after the agent name to
+install for the current user instead:
+
+```bash
+taskx skill install codex --global
+```
+
+The global destinations are `~/.agents/skills/taskx`,
+`~/.claude/skills/taskx`, and `~/.config/opencode/skills/taskx`. Reinstalling
+identical content is safe; taskx refuses to overwrite a different existing
+skill.
+
+Without the skill, a repository using taskx needs only a minimal `AGENTS.md`:
 
 ```md
 ## Tasks

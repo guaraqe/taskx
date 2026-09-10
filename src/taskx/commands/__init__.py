@@ -15,6 +15,7 @@ from taskx.commands.creation import run as run_creation
 from taskx.commands.help import run as run_help
 from taskx.commands.inspection import run as run_inspection
 from taskx.commands.lifecycle import run as run_lifecycle
+from taskx.commands.skill import run as run_skill
 from taskx.errors import UsageError
 from taskx.project import resolve_project
 from taskx.taskwarrior import Taskwarrior, TaskwarriorAdapter
@@ -33,6 +34,9 @@ def dispatch(
     environment = dict(os.environ if env is None else env)
     output = sys.stdout if stdout is None else stdout
     command = args.command
+
+    if command == "skill":
+        return run_skill(args, cwd=cwd, env=environment, stdout=output)
 
     project = ""
     actor = ""

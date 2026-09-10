@@ -56,6 +56,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser("actor")
     commands.add_parser("project")
+
+    skill = commands.add_parser("skill")
+    skill_commands = skill.add_subparsers(dest="skill_command", required=True)
+    install = skill_commands.add_parser("install")
+    installers = install.add_subparsers(dest="agent", required=True)
+    for agent in ("codex", "claude", "opencode"):
+        installer = installers.add_parser(agent)
+        installer.add_argument("--global", action="store_true", dest="global_install")
+
     help_parser = commands.add_parser("help")
     help_parser.add_argument("topic", choices=("agent",))
     return parser

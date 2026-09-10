@@ -8,6 +8,7 @@
         packages = [
           pkgs.git
           pkgs.python311
+          pkgs.python311Packages.pyyaml
           pkgs.python311Packages.pytest
           pkgs.ruff
           pkgs.taskwarrior3

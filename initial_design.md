@@ -187,6 +187,11 @@ task ... export
 
 and parse the resulting JSON.
 
+Every invocation must disable the user's active Taskwarrior context with a
+runtime `rc.context=` override. Project selection must use Taskwarrior's exact
+`project.is:<name>` filter so hierarchical subprojects do not leak into the
+current repository's task set.
+
 For writes, use normal Taskwarrior commands or its supported JSON import interface where doing so materially improves correctness.
 
 The implementation should centralize all Taskwarrior subprocess interaction behind a small adapter rather than scattering subprocess calls through command handlers.
@@ -211,16 +216,19 @@ CLI
 `taskx` adds the following Taskwarrior UDAs:
 
 ```text
-taskx.created_by
-taskx.started_by
-taskx.closed_by
+taskx_created_by
+taskx_started_by
+taskx_closed_by
 ```
 
 All three are strings.
 
-They should use Taskwarrior's namespaced UDA convention.
+Version 1 uses a `taskx_` prefix rather than dotted names. Taskwarrior 3.5 does
+not accept dotted UDA names as ordinary CLI modifiers, while underscore names
+allow attribution and lifecycle changes to occur in the same Taskwarrior
+command.
 
-### `taskx.created_by`
+### `taskx_created_by`
 
 Actor that created the task through `taskx`.
 
@@ -234,7 +242,7 @@ It never changes.
 
 Tasks originally created directly through Taskwarrior may not contain this field.
 
-### `taskx.started_by`
+### `taskx_started_by`
 
 Actor that most recently successfully started the task.
 
@@ -244,14 +252,14 @@ Set automatically by:
 taskx start
 ```
 
-A task that is active must have `taskx.started_by`.
+A task that is active must have `taskx_started_by`.
 
 This field remains after a task is released. A later `start` overwrites it.
 
 Therefore:
 
 ```text
-ACTIVE + taskx.started_by
+ACTIVE + taskx_started_by
 ```
 
 means "currently being worked on by this actor."
@@ -260,7 +268,7 @@ On a non-active task, the field means "most recent actor that started this task.
 
 Version 1 intentionally does not preserve earlier starters.
 
-### `taskx.closed_by`
+### `taskx_closed_by`
 
 Actor that completed the task through:
 
@@ -353,7 +361,7 @@ JSON output is intended for programmatic/agent use.
 
 ### `taskx list`
 
-Show all currently pending tasks for the project.
+Show all currently pending tasks for the project, including waiting tasks.
 
 ```bash
 taskx list
@@ -400,9 +408,9 @@ annotations
 created timestamp
 start timestamp, if any
 end timestamp, if any
-taskx.created_by
-taskx.started_by
-taskx.closed_by
+taskx_created_by
+taskx_started_by
+taskx_closed_by
 ```
 
 Missing optional metadata is allowed.
@@ -431,7 +439,7 @@ The created task automatically receives:
 
 ```text
 project:<current-project>
-taskx.created_by:<current-actor>
+taskx_created_by:<current-actor>
 ```
 
 The command prints the new UUID.
@@ -468,7 +476,7 @@ task is not already active
 If successful:
 
 ```text
-taskx.started_by = current actor
+taskx_started_by = current actor
 Taskwarrior task becomes active
 ```
 
@@ -500,7 +508,7 @@ The task must currently be active.
 
 The command stops the Taskwarrior task and returns it to the normal pending pool.
 
-`taskx.started_by` is intentionally retained as historical metadata.
+`taskx_started_by` is intentionally retained as historical metadata.
 
 If `--reason` is provided, it is stored as an ordinary Taskwarrior annotation.
 
@@ -516,7 +524,9 @@ Complete a task.
 taskx done <uuid>
 ```
 
-The command must refuse to complete a task that has never been started through the expected lifecycle unless an explicit future override mechanism is introduced.
+The command must refuse to complete a task unless it is currently active and
+has been started through `taskx`. A released task must be started again before
+completion unless an explicit future override mechanism is introduced.
 
 Normal v1 invariant:
 
@@ -527,7 +537,7 @@ start → done
 Before completion:
 
 ```text
-taskx.closed_by = current actor
+taskx_closed_by = current actor
 ```
 
 must be stored.
@@ -726,6 +736,7 @@ start
 release
 done
 depends
+note
 ```
 
 Locking must remain an implementation detail. It should not introduce another persistent task database.
@@ -748,9 +759,9 @@ Prefer runtime configuration if it works reliably with the supported Taskwarrior
 The required UDA schema is logically:
 
 ```text
-taskx.created_by : string
-taskx.started_by : string
-taskx.closed_by  : string
+taskx_created_by : string
+taskx_started_by : string
+taskx_closed_by  : string
 ```
 
 ---

@@ -1,0 +1,30 @@
+[project]
+name = "taskx"
+version = "0.1.0"
+description = "A project-aware Taskwarrior CLI for development tasks"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+taskx = "taskx.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers"]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+exclude = ["*.md"]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ty.environment]
+python-version = "3.11"

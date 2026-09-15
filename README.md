@@ -13,13 +13,7 @@ lifecycle transitions, and records who did what.
 ## Installation
 
 ```bash
-nix profile install github:guaraqe/taskx#taskx
-```
-
-or run it without installing:
-
-```bash
-nix run github:guaraqe/taskx#taskx -- list
+uv tool install git+https://github.com/guaraqe/taskx
 ```
 
 ## Basic commands

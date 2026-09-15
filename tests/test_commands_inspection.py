@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 
-from taskx.cli import build_parser
 from taskx.commands.contracts import CommandContext, CommandHandler
 from taskx.commands.inspection import run
 from taskx.errors import UsageError
@@ -105,6 +104,10 @@ def make_context(
     return context, stream
 
 
+def command_args(command: str, **values: object) -> argparse.Namespace:
+    return argparse.Namespace(command=command, **({"json_output": False} | values))
+
+
 def test_run_satisfies_command_handler_protocol() -> None:
     handler: CommandHandler = run
 
@@ -115,7 +118,7 @@ def test_actor_prints_context_actor_and_no_taskwarrior_calls() -> None:
     taskwarrior = RecordingTaskwarrior()
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["actor"]), context) == 0
+    assert run(command_args("actor"), context) == 0
 
     assert stream.getvalue() == "test:fixture\n"
     assert taskwarrior.calls == []
@@ -125,7 +128,7 @@ def test_project_prints_context_project_and_no_taskwarrior_calls() -> None:
     taskwarrior = RecordingTaskwarrior()
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["project"]), context) == 0
+    assert run(command_args("project"), context) == 0
 
     assert stream.getvalue() == "demo\n"
     assert taskwarrior.calls == []
@@ -139,7 +142,7 @@ def test_ready_prints_concise_lines_for_human_output() -> None:
     taskwarrior = RecordingTaskwarrior(ready=tasks)
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["ready"]), context) == 0
+    assert run(command_args("ready"), context) == 0
 
     assert taskwarrior.calls == [("ready", "demo")]
     assert stream.getvalue() == (f"{UUID} Implement parser\n{OTHER} Write docs\n")
@@ -153,7 +156,7 @@ def test_list_prints_state_suffixes_for_human_output() -> None:
     taskwarrior = RecordingTaskwarrior(pending=tasks)
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["list"]), context) == 0
+    assert run(command_args("list"), context) == 0
 
     assert taskwarrior.calls == [("list_pending", "demo")]
     assert stream.getvalue() == (
@@ -165,7 +168,7 @@ def test_ready_json_is_the_normalized_model() -> None:
     taskwarrior = RecordingTaskwarrior(ready=[sample_task()])
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["ready", "--json"]), context) == 0
+    assert run(command_args("ready", json_output=True), context) == 0
 
     value = json.loads(stream.getvalue())
     assert value == [sample_task().to_dict()]
@@ -183,7 +186,7 @@ def test_list_json_is_a_normalized_array() -> None:
     taskwarrior = RecordingTaskwarrior(pending=tasks)
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["list", "--json"]), context) == 0
+    assert run(command_args("list", json_output=True), context) == 0
 
     value = json.loads(stream.getvalue())
     assert value == [task.to_dict() for task in tasks]
@@ -199,7 +202,7 @@ def test_show_passes_project_and_reference_and_prints_details() -> None:
     taskwarrior = RecordingTaskwarrior(get=task)
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["show", "12345678"]), context) == 0
+    assert run(command_args("show", uuid="12345678"), context) == 0
 
     assert taskwarrior.calls == [("get", "demo", "12345678")]
     assert stream.getvalue() == (
@@ -222,7 +225,7 @@ def test_show_json_is_the_normalized_model() -> None:
     taskwarrior = RecordingTaskwarrior(get=task)
     context, stream = make_context(taskwarrior)
 
-    assert run(build_parser().parse_args(["show", UUID, "--json"]), context) == 0
+    assert run(command_args("show", uuid=UUID, json_output=True), context) == 0
 
     value = json.loads(stream.getvalue())
     assert value == task.to_dict()

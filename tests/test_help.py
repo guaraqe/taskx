@@ -4,7 +4,6 @@ import argparse
 from collections.abc import Sequence
 from io import StringIO
 
-from taskx.cli import build_parser
 from taskx.commands.contracts import CommandContext, CommandHandler
 from taskx.commands.help import AGENT_HELP, run
 from taskx.model import Task
@@ -95,7 +94,7 @@ def test_help_agent_text_covers_the_required_workflow() -> None:
 
 
 def test_cli_help_topic_shape_feeds_handler() -> None:
-    args = build_parser().parse_args(["help", "agent"])
+    args = argparse.Namespace(command="help", topic="agent")
     context, stream = make_context()
 
     assert args.topic == "agent"

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import argparse
 from importlib.resources import files
 from io import StringIO
 from pathlib import Path
 
 import pytest
 
-from taskx.cli import build_parser
 from taskx.commands import dispatch
 from taskx.commands.skill import install_skill, skill_path
 from taskx.errors import ConflictError, TaskxError
@@ -21,20 +21,6 @@ GLOBAL_DIRECTORIES = {
     "claude": Path(".claude/skills/taskx/SKILL.md"),
     "opencode": Path(".config/opencode/skills/taskx/SKILL.md"),
 }
-
-
-@pytest.mark.parametrize("agent", ("codex", "claude", "opencode"))
-def test_parser_accepts_agent_subcommands_and_global_option(agent: str) -> None:
-    local = build_parser().parse_args(["skill", "install", agent])
-    global_install = build_parser().parse_args(["skill", "install", agent, "--global"])
-
-    assert (local.command, local.skill_command, local.agent) == (
-        "skill",
-        "install",
-        agent,
-    )
-    assert local.global_install is False
-    assert global_install.global_install is True
 
 
 @pytest.mark.parametrize("agent", ("codex", "claude", "opencode"))
@@ -106,7 +92,12 @@ def test_dispatch_installs_globally_outside_git_without_taskwarrior(
     output = StringIO()
 
     result = dispatch(
-        build_parser().parse_args(["skill", "install", "opencode", "--global"]),
+        argparse.Namespace(
+            command="skill",
+            skill_command="install",
+            agent="opencode",
+            global_install=True,
+        ),
         cwd=tmp_path,
         env={"HOME": str(home)},
         stdout=output,

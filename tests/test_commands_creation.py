@@ -7,7 +7,6 @@ from io import StringIO
 
 import pytest
 
-from taskx.cli import build_parser
 from taskx.commands.contracts import CommandContext, CommandHandler
 from taskx.commands.creation import run
 from taskx.errors import TaskNotFoundError, TaskxError, UsageError
@@ -89,9 +88,8 @@ class RecordingTaskwarrior:
 
 
 def make_setup(
-    argv: Sequence[str], adapter: Taskwarrior
+    args: argparse.Namespace, adapter: Taskwarrior
 ) -> tuple[argparse.Namespace, CommandContext, StringIO]:
-    args = build_parser().parse_args(argv)
     stream = StringIO()
     context = CommandContext(
         project="demo",
@@ -100,6 +98,10 @@ def make_setup(
         stdout=stream,
     )
     return args, context, stream
+
+
+def command_args(command: str, **values: object) -> argparse.Namespace:
+    return argparse.Namespace(command=command, **({"json_output": False} | values))
 
 
 def test_run_satisfies_command_handler_protocol() -> None:
@@ -111,7 +113,8 @@ def test_run_satisfies_command_handler_protocol() -> None:
 def test_add_maps_arguments_and_prints_created_uuid() -> None:
     adapter = RecordingTaskwarrior(sample_task())
     args, context, stream = make_setup(
-        ["add", "Implement evaluator", "--depends", DEPENDENCY], adapter
+        command_args("add", description="Implement evaluator", depends=[DEPENDENCY]),
+        adapter,
     )
 
     assert run(args, context) == 0
@@ -123,7 +126,9 @@ def test_add_maps_arguments_and_prints_created_uuid() -> None:
 
 def test_add_without_dependencies_passes_empty_collection() -> None:
     adapter = RecordingTaskwarrior(sample_task())
-    args, context, stream = make_setup(["add", "Implement parser"], adapter)
+    args, context, stream = make_setup(
+        command_args("add", description="Implement parser", depends=[]), adapter
+    )
 
     assert run(args, context) == 0
     assert adapter.add_calls == [("demo", "Implement parser", "human:juan", ())]
@@ -133,7 +138,10 @@ def test_add_without_dependencies_passes_empty_collection() -> None:
 def test_add_json_prints_normalized_task() -> None:
     adapter = RecordingTaskwarrior(sample_task())
     args, context, stream = make_setup(
-        ["add", "Implement evaluator", "--json"], adapter
+        command_args(
+            "add", description="Implement evaluator", depends=[], json_output=True
+        ),
+        adapter,
     )
 
     assert run(args, context) == 0
@@ -143,7 +151,7 @@ def test_add_json_prints_normalized_task() -> None:
 def test_note_maps_arguments_and_prints_noted_uuid() -> None:
     adapter = RecordingTaskwarrior(sample_task())
     args, context, stream = make_setup(
-        ["note", UUID, "Design: docs/parser.md"], adapter
+        command_args("note", uuid=UUID, text="Design: docs/parser.md"), adapter
     )
 
     assert run(args, context) == 0
@@ -153,7 +161,9 @@ def test_note_maps_arguments_and_prints_noted_uuid() -> None:
 
 def test_note_json_prints_normalized_task() -> None:
     adapter = RecordingTaskwarrior(sample_task())
-    args, context, stream = make_setup(["note", UUID, "context", "--json"], adapter)
+    args, context, stream = make_setup(
+        command_args("note", uuid=UUID, text="context", json_output=True), adapter
+    )
 
     assert run(args, context) == 0
     assert json.loads(stream.getvalue()) == sample_task().to_dict()
@@ -161,7 +171,10 @@ def test_note_json_prints_normalized_task() -> None:
 
 def test_depends_add_maps_arguments_and_prints_updated_uuid() -> None:
     adapter = RecordingTaskwarrior(sample_task())
-    args, context, stream = make_setup(["depends", UUID, "add", DEPENDENCY], adapter)
+    args, context, stream = make_setup(
+        command_args("depends", uuid=UUID, action="add", dependency_uuid=DEPENDENCY),
+        adapter,
+    )
 
     assert run(args, context) == 0
     assert adapter.dependency_calls == [("demo", UUID, DEPENDENCY, True)]
@@ -170,7 +183,10 @@ def test_depends_add_maps_arguments_and_prints_updated_uuid() -> None:
 
 def test_depends_remove_passes_add_false() -> None:
     adapter = RecordingTaskwarrior(sample_task())
-    args, context, stream = make_setup(["depends", UUID, "remove", DEPENDENCY], adapter)
+    args, context, stream = make_setup(
+        command_args("depends", uuid=UUID, action="remove", dependency_uuid=DEPENDENCY),
+        adapter,
+    )
 
     assert run(args, context) == 0
     assert adapter.dependency_calls == [("demo", UUID, DEPENDENCY, False)]
@@ -180,7 +196,14 @@ def test_depends_remove_passes_add_false() -> None:
 def test_depends_json_prints_normalized_task() -> None:
     adapter = RecordingTaskwarrior(sample_task())
     args, context, stream = make_setup(
-        ["depends", UUID, "add", DEPENDENCY, "--json"], adapter
+        command_args(
+            "depends",
+            uuid=UUID,
+            action="add",
+            dependency_uuid=DEPENDENCY,
+            json_output=True,
+        ),
+        adapter,
     )
 
     assert run(args, context) == 0
@@ -189,7 +212,9 @@ def test_depends_json_prints_normalized_task() -> None:
 
 def test_adapter_exceptions_propagate_unchanged() -> None:
     adapter = RecordingTaskwarrior(sample_task(), error=TaskNotFoundError("no task"))
-    note_args, note_context, _ = make_setup(["note", UUID, "text"], adapter)
+    note_args, note_context, _ = make_setup(
+        command_args("note", uuid=UUID, text="text"), adapter
+    )
 
     with pytest.raises(TaskNotFoundError):
         run(note_args, note_context)
@@ -197,7 +222,9 @@ def test_adapter_exceptions_propagate_unchanged() -> None:
     conflict_adapter = RecordingTaskwarrior(
         sample_task(), error=UsageError("ambiguous prefix")
     )
-    add_args, add_context, _ = make_setup(["add", "description"], conflict_adapter)
+    add_args, add_context, _ = make_setup(
+        command_args("add", description="description", depends=[]), conflict_adapter
+    )
 
     with pytest.raises(UsageError):
         run(add_args, add_context)

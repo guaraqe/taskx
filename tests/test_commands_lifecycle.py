@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 
-from taskx.cli import build_parser
 from taskx.commands.contracts import CommandContext, CommandHandler
 from taskx.commands.lifecycle import run
 from taskx.errors import ConflictError, TaskNotFoundError, TaskxError, UsageError
@@ -91,9 +90,8 @@ class RecordingTaskwarrior:
 
 
 def make_setup(
-    argv: Sequence[str], adapter: Taskwarrior
+    args: argparse.Namespace, adapter: Taskwarrior
 ) -> tuple[argparse.Namespace, CommandContext, StringIO]:
-    args = build_parser().parse_args(argv)
     stream = StringIO()
     context = CommandContext(
         project="demo",
@@ -102,6 +100,10 @@ def make_setup(
         stdout=stream,
     )
     return args, context, stream
+
+
+def command_args(command: str, **values: object) -> argparse.Namespace:
+    return argparse.Namespace(command=command, **({"json_output": False} | values))
 
 
 def test_run_satisfies_command_handler_protocol() -> None:
@@ -113,7 +115,7 @@ def test_run_satisfies_command_handler_protocol() -> None:
 def test_start_maps_project_uuid_and_actor() -> None:
     task = sample_task(active=True, started_by="human:juan")
     adapter = RecordingTaskwarrior(task)
-    args, context, stream = make_setup(["start", UUID], adapter)
+    args, context, stream = make_setup(command_args("start", uuid=UUID), adapter)
 
     assert run(args, context) == 0
     assert adapter.start_calls == [("demo", UUID, "human:juan")]
@@ -123,7 +125,9 @@ def test_start_maps_project_uuid_and_actor() -> None:
 def test_start_json_prints_normalized_task() -> None:
     task = sample_task(active=True, started_by="codex:abc")
     adapter = RecordingTaskwarrior(task)
-    args, context, stream = make_setup(["start", UUID, "--json"], adapter)
+    args, context, stream = make_setup(
+        command_args("start", uuid=UUID, json_output=True), adapter
+    )
 
     assert run(args, context) == 0
     value = json.loads(stream.getvalue())
@@ -135,7 +139,8 @@ def test_start_json_prints_normalized_task() -> None:
 def test_release_maps_reason_and_prints_released_uuid() -> None:
     adapter = RecordingTaskwarrior(sample_task())
     args, context, stream = make_setup(
-        ["release", UUID, "--reason", "Waiting for API decision"], adapter
+        command_args("release", uuid=UUID, reason="Waiting for API decision"),
+        adapter,
     )
 
     assert run(args, context) == 0
@@ -145,7 +150,9 @@ def test_release_maps_reason_and_prints_released_uuid() -> None:
 
 def test_release_without_reason_passes_none() -> None:
     adapter = RecordingTaskwarrior(sample_task())
-    args, context, stream = make_setup(["release", UUID], adapter)
+    args, context, stream = make_setup(
+        command_args("release", uuid=UUID, reason=None), adapter
+    )
 
     assert run(args, context) == 0
     assert adapter.release_calls == [("demo", UUID, None)]
@@ -155,7 +162,9 @@ def test_release_without_reason_passes_none() -> None:
 def test_release_json_prints_normalized_task() -> None:
     task = sample_task(started_by="human:juan")
     adapter = RecordingTaskwarrior(task)
-    args, context, stream = make_setup(["release", UUID, "--json"], adapter)
+    args, context, stream = make_setup(
+        command_args("release", uuid=UUID, reason=None, json_output=True), adapter
+    )
 
     assert run(args, context) == 0
     value = json.loads(stream.getvalue())
@@ -171,7 +180,7 @@ def test_done_maps_project_uuid_and_actor() -> None:
         closed_by="human:juan",
     )
     adapter = RecordingTaskwarrior(task)
-    args, context, stream = make_setup(["done", UUID], adapter)
+    args, context, stream = make_setup(command_args("done", uuid=UUID), adapter)
 
     assert run(args, context) == 0
     assert adapter.done_calls == [("demo", UUID, "human:juan")]
@@ -186,7 +195,9 @@ def test_done_json_prints_normalized_task_with_attribution() -> None:
         closed_by="human:juan",
     )
     adapter = RecordingTaskwarrior(task)
-    args, context, stream = make_setup(["done", UUID, "--json"], adapter)
+    args, context, stream = make_setup(
+        command_args("done", uuid=UUID, json_output=True), adapter
+    )
 
     assert run(args, context) == 0
     value = json.loads(stream.getvalue())
@@ -199,14 +210,18 @@ def test_adapter_exceptions_propagate_unchanged() -> None:
     conflict = RecordingTaskwarrior(
         sample_task(), error=ConflictError("task is already active")
     )
-    start_args, start_context, start_stream = make_setup(["start", UUID], conflict)
+    start_args, start_context, start_stream = make_setup(
+        command_args("start", uuid=UUID), conflict
+    )
 
     with pytest.raises(ConflictError, match="already active"):
         run(start_args, start_context)
     assert start_stream.getvalue() == ""
 
     missing = RecordingTaskwarrior(sample_task(), error=TaskNotFoundError("no task"))
-    done_args, done_context, done_stream = make_setup(["done", UUID], missing)
+    done_args, done_context, done_stream = make_setup(
+        command_args("done", uuid=UUID), missing
+    )
 
     with pytest.raises(TaskNotFoundError):
         run(done_args, done_context)

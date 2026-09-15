@@ -16,7 +16,7 @@ The implementation follows `initial_design.md` with these settled details:
   covers validation, mutation, and postcondition verification.
 - Python 3.11 remains the minimum supported Python version. Initial integration
   development targets Taskwarrior 3.x and is verified against Taskwarrior 3.5.
-- Runtime dependencies remain empty.
+- Runtime Python dependencies are managed and locked by uv.
 
 The development stack is:
 
@@ -27,12 +27,12 @@ The development stack is:
 - pytest for tests.
 
 `flake.nix` provides the small development toolchain: Python 3.11, `uv`, Ruff,
-ty, pytest, Taskwarrior, and Git. NixOS cannot directly execute the generic
+ty, Taskwarrior, and Git. NixOS cannot directly execute the generic
 Linux binaries distributed through uv for Python, Ruff, and ty without a
 host-wide `nix-ld` configuration, so the flake supplies those executables while
-uv still owns the project environment, dependency lock, build backend, and
-standard command-running interface. Version 1 does not define a Nix package
-output.
+uv owns Python runtime and development dependencies, the project environment,
+dependency lock, build backend, and standard command-running interface. Version
+1 does not define a Nix package output.
 
 ## 2. Part I — primary-agent scaffolding
 

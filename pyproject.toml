@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "A project-aware Taskwarrior CLI for development tasks"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "typer>=0.27.2",
+]
 
 [project.scripts]
 taskx = "taskx.cli:main"
@@ -28,3 +30,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.ty.environment]
 python-version = "3.11"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

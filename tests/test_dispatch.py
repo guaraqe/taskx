@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from collections.abc import Sequence
@@ -8,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from taskx.cli import build_parser, main
+from taskx.cli import main
 from taskx.commands import dispatch
 from taskx.model import Task
 
@@ -66,7 +67,7 @@ def test_help_and_actor_do_not_require_a_git_repository(tmp_path: Path) -> None:
     help_output = StringIO()
     assert (
         dispatch(
-            build_parser().parse_args(["help", "agent"]),
+            argparse.Namespace(command="help", topic="agent"),
             cwd=tmp_path,
             env={},
             stdout=help_output,
@@ -79,7 +80,7 @@ def test_help_and_actor_do_not_require_a_git_repository(tmp_path: Path) -> None:
     actor_output = StringIO()
     assert (
         dispatch(
-            build_parser().parse_args(["actor"]),
+            argparse.Namespace(command="actor"),
             cwd=tmp_path,
             env={"TASKX_ACTOR": "test:actor"},
             stdout=actor_output,
@@ -98,7 +99,7 @@ def test_ready_builds_project_and_actor_context(
     output = StringIO()
 
     result = dispatch(
-        build_parser().parse_args(["ready", "--json"]),
+        argparse.Namespace(command="ready", json_output=True),
         cwd=git_repo,
         env=os.environ | {"TASKX_ACTOR": "test:actor"},
         stdout=output,

@@ -16,7 +16,8 @@ This document describes the initial v0.1 command surface, which follows
 - `git`
 - Taskwarrior 3.x (verified against Taskwarrior 3.5)
 
-taskx has no runtime Python dependencies.
+taskx uses [Typer](https://typer.tiangolo.com/) for its typed, documented command
+line interface and Rich terminal help.
 
 ## Installation
 
@@ -145,9 +146,9 @@ Taskwarrior use.
 
 ## Development
 
-The flake provides the development toolchain (Python 3.11, uv, Ruff, ty,
-pytest, Taskwarrior, Git); uv owns the project environment and lockfile. No
-Nix package derivation is produced.
+The flake provides the development toolchain and system executables (Python
+3.11, uv, Ruff, ty, Taskwarrior, Git); uv owns Python dependencies and the
+lockfile. No Nix package derivation is produced.
 
 ```bash
 nix develop # toolchain shell
